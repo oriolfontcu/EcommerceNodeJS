@@ -1,8 +1,6 @@
-export interface AuthUserDto {
-  id?: string;
-  email: string;
-  password: string;
-  isBlocked?: boolean;
-  authToken?: string;
-  refreshToken?: string;
+import { IUser } from './user.interface';
+
+export interface AuthUserDto extends Omit<IUser, 'password'> {
+  accessToken: string;
+  refreshToken: string;
 }

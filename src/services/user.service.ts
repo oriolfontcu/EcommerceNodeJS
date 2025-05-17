@@ -21,11 +21,9 @@ export class UserService {
       name: true,
       surname: true,
       email: true,
-      password: true,
       address: true,
       isBlocked: true,
-      createdAt: false,
-      updatedAt: false,
+      refreshTokens: true,
     };
   }
 
@@ -57,8 +55,7 @@ export class UserService {
   };
 
   getById = async (id: string): Promise<IUser> => {
-    const projection = { ...this.defaultProjection };
-    const user = await this.userRepository.getById(id, projection);
+    const user = await this.userRepository.getById(id, this.defaultProjection);
     if (!user) {
       logger.warn(`User with id ${id} not found`);
       throw new AppError('User not found', httpStatus.NOT_FOUND);
@@ -74,11 +71,10 @@ export class UserService {
       logger.debug('Pagination limit adjusted to MAX_LIMIT', { pagination });
     }
     const filters = {};
-    const projection = { ...this.defaultProjection };
     logger.debug(
       `Fetching all users with filters: ${JSON.stringify(filters)} and pagination: ${JSON.stringify(pagination)}`,
     );
-    return this.userRepository.find(filters, projection, pagination);
+    return this.userRepository.find(filters, this.defaultProjection, pagination);
   };
 
   create = async (data: IUser): Promise<IUser> => {
@@ -88,13 +84,12 @@ export class UserService {
       logger.warn(`User with email ${normalizedData.email} already exists`);
       throw new AppError('A user with this email already exists', httpStatus.CONFLICT);
     }
-    this.validatePassword(normalizedData.password, normalizedData.passwordConfirmation); // TODO: Demanar a Oriol això com s'hauria de fer per bones practices
+    this.validatePassword(normalizedData.password, normalizedData.passwordConfirmation);
     normalizedData.password = await PasswordHelper.hashPassword(normalizedData.password);
 
     // Here we delete the password from the normalizedData to avoid inserting into the Database
     delete normalizedData.passwordConfirmation;
-    const projection = { ...this.defaultProjection, isBlocked: false };
-    const createdUser = await this.userRepository.create(normalizedData, projection);
+    const createdUser = await this.userRepository.create(normalizedData, this.defaultProjection);
     if (!createdUser) {
       logger.warn('User creation failed');
       throw new AppError('User creation failed', httpStatus.INTERNAL_SERVER_ERROR);
@@ -122,8 +117,7 @@ export class UserService {
       this.validatePassword(normalizedData.password, normalizedData.passwordConfirmation);
       normalizedData.password = await PasswordHelper.hashPassword(normalizedData.password);
     }
-    const projection = { ...this.defaultProjection };
-    const userUpdated = await this.userRepository.update(id, normalizedData, projection);
+    const userUpdated = await this.userRepository.update(id, normalizedData, this.defaultProjection);
     if (!userUpdated) {
       logger.warn(`User with id ${id} not found after update attempt`);
       throw new AppError('User not found', httpStatus.NOT_FOUND);
@@ -134,8 +128,7 @@ export class UserService {
 
   delete = async (id: string): Promise<IUser> => {
     logger.debug(`Starting deletion for user id: ${id}`);
-    const projection = { ...this.defaultProjection };
-    const userDeleted = await this.userRepository.delete(id, projection);
+    const userDeleted = await this.userRepository.delete(id, this.defaultProjection);
     if (!userDeleted) {
       logger.warn(`User with id ${id} not found for deletion`);
       throw new AppError('User not found', httpStatus.NOT_FOUND);

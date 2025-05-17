@@ -20,7 +20,7 @@ export class TokenHelper {
     logger.debug('TokenHelper: Generating token', { payloadSummary: Object.keys(payload) });
 
     const options: jwt.SignOptions = {
-      expiresIn: expires === 'auth' ? '5000s' : '24h',
+      expiresIn: expires === 'auth' ? '5m' : '24h',
     };
     if (!SECRET_KEY) {
       logger.error('TokenHelper: SECRET_KEY is not defined');
@@ -32,7 +32,7 @@ export class TokenHelper {
     return token;
   };
 
-  static readonly verifyToken = (token: string): string | JwtPayload => {
+  static readonly verifyToken = (token: string): JwtPayload => {
     logger.debug('TokenHelper: Verifying token');
 
     if (!SECRET_KEY) {
@@ -42,11 +42,30 @@ export class TokenHelper {
 
     try {
       const decoded = jwt.verify(token, SECRET_KEY);
+      if (typeof decoded === 'string') {
+        throw new AppError('Invalid token format', httpStatus.UNAUTHORIZED);
+      }
       logger.debug('TokenHelper: Token verified successfully');
       return decoded;
     } catch (error) {
       logger.error({ error: error.message }, 'TokenHelper: Token verification failed');
+      if (error.name === 'TokenExpiredError') {
+        throw new AppError('Token expired', httpStatus.UNAUTHORIZED);
+      }
       throw new AppError('Invalid token', httpStatus.UNAUTHORIZED);
+    }
+  };
+
+  static readonly decodeToken = (token: string): JwtPayload => {
+    try {
+      const decoded = jwt.decode(token);
+      if (!decoded || typeof decoded === 'string') {
+        throw new AppError('Invalid token format', httpStatus.UNAUTHORIZED);
+      }
+      return decoded;
+    } catch (error) {
+      logger.error({ error: error.message }, 'TokenHelper: Token decoding failed');
+      throw new AppError('Invalid token format', httpStatus.UNAUTHORIZED);
     }
   };
 }

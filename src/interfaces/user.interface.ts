@@ -3,14 +3,15 @@
 
 export interface IUser {
   id?: string;
-  name: string;
-  surname: string;
   email: string;
   password: string;
-  passwordConfirmation?: string; // TODO: Demanar a Oriol si aixi està bé o podria fallar
+  passwordConfirmation?: string;
+  name: string;
+  surname: string;
   address: string;
+  isBlocked: boolean;
+  refreshToken?: string;
+  isTokenValid?: boolean;
   createdAt?: Date;
   updatedAt?: Date;
-  authToken?: string;
-  refreshToken?: string;
 }

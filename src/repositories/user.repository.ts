@@ -28,82 +28,122 @@ export class UserRepository {
     );
   }
 
-  getById = async (id: string, projection: Record<string, boolean>): Promise<IUser | null> => {
-    logger.debug(`Repository: Fetching user by id: ${id}`);
-    const userFound = await this.baseRepository.getById(id, this.mapProjection(projection));
-    if (!userFound) {
-      logger.debug(`Repository: No user found with id: ${id}`);
-      return null;
+  async getById(id: string, projection: Record<string, boolean> = {}): Promise<IUser | null> {
+    try {
+      const user = await UserModel.findById(id, projection);
+      return user ? this.transformId(user) : null;
+    } catch (error) {
+      logger.error({ error }, 'Error in getById');
+      throw error;
     }
-    const transformedUser = this.transformId(userFound);
-    logger.debug(`Repository: User with id ${id} fetched and transformed`);
-    return transformedUser;
-  };
+  }
 
-  find = async (
-    filters: Record<string, unknown> = {},
-    projection: Record<string, boolean> = {},
-    pagination: { skip: number; limit: number } = { skip: 0, limit: 0 },
-  ): Promise<IUser[]> => {
-    const options = { ...pagination };
-    logger.debug(
-      `Repository: Finding users with filters: ${JSON.stringify(filters)} and pagination: ${JSON.stringify(pagination)}`,
-    );
-    const users = await this.baseRepository.find<IUserModel>(filters, this.mapProjection(projection), options);
-    logger.debug(`Repository: Found ${users.length} users`);
-    return users.map((user) => this.transformId(user));
-  };
-
-  create = async (data: IUser, projection: Record<string, boolean>): Promise<IUser | null> => {
-    logger.debug('Repository: Creating user with data', { data });
-    const createdUser = await this.baseRepository.create(data);
-    if (!createdUser) {
-      logger.debug('Repository: User creation returned null');
-      return null;
+  async getByEmail(email: string, projection: Record<string, boolean> = {}): Promise<IUser | null> {
+    try {
+      const user = await UserModel.findOne({ email }, projection);
+      return user ? this.transformId(user) : null;
+    } catch (error) {
+      logger.error({ error }, 'Error in getByEmail');
+      throw error;
     }
-    const transformedUser = this.transformId(createdUser);
-    const filteredUser = Object.fromEntries(
-      Object.entries(transformedUser).filter(([field]) => projection[field] !== false),
-    );
-    logger.debug('Repository: User created and transformed', { user: filteredUser });
-    return filteredUser as IUser;
-  };
+  }
 
-  getByEmail = async (email: string, projection: Record<string, boolean>): Promise<AuthUserDto | null> => {
-    logger.debug(`Repository: Fetching user by email: ${email}`);
-    const filters = { email };
-    const userFound = await this.baseRepository.findOne(filters, this.mapProjection(projection));
-    if (!userFound) {
-      logger.debug(`Repository: No user found with email: ${email}`);
-      return null;
+  async find(
+    filters: Record<string, any>,
+    projection: Record<string, boolean>,
+    pagination: { skip: number; limit: number },
+  ): Promise<IUser[]> {
+    try {
+      const users = await UserModel.find(filters, projection).skip(pagination.skip).limit(pagination.limit);
+      return users.map((user) => this.transformId(user));
+    } catch (error) {
+      logger.error({ error }, 'Error in find');
+      throw error;
     }
-    const transformedUser = this.transformId(userFound);
-    logger.debug(`Repository: User with email ${email} fetched and transformed`);
-    return transformedUser;
-  };
+  }
 
-  update = async (id: string, data: IUser, projection: Record<string, boolean>): Promise<IUser | null> => {
-    logger.debug(`Repository: Updating user with id: ${id}`, { data });
-    data.updatedAt = new Date();
-    const updatedUser = await this.baseRepository.update(id, data, this.mapProjection(projection));
-    if (!updatedUser) {
-      logger.debug(`Repository: No user found to update with id: ${id}`);
-      return null;
+  async create(data: IUser, projection: Record<string, boolean> = {}): Promise<IUser> {
+    try {
+      const user = new UserModel(data);
+      await user.save();
+      return this.transformId(user);
+    } catch (error) {
+      logger.error({ error }, 'Error in create');
+      throw error;
     }
-    const transformedUser = this.transformId(updatedUser);
-    logger.debug(`Repository: User with id ${id} updated and transformed`);
-    return transformedUser;
-  };
+  }
 
-  delete = async (id: string, projection: Record<string, boolean>): Promise<IUser | null> => {
-    logger.debug(`Repository: Deleting user with id: ${id}`);
-    const userDeleted = await this.baseRepository.delete(id, this.mapProjection(projection));
-    if (!userDeleted) {
-      logger.warn(`Repository: No user found to delete with id: ${id}`);
-      return null;
+  async update(id: string, data: Partial<IUser>, projection: Record<string, boolean> = {}): Promise<IUser | null> {
+    try {
+      const user = await UserModel.findByIdAndUpdate(id, data, { new: true, projection });
+      return user ? this.transformId(user) : null;
+    } catch (error) {
+      logger.error({ error }, 'Error in update');
+      throw error;
     }
-    const transformedUser = this.transformId(userDeleted);
-    logger.debug(`Repository: User with id ${id} deleted and transformed`);
-    return transformedUser;
-  };
+  }
+
+  async delete(id: string, projection: Record<string, boolean> = {}): Promise<IUser | null> {
+    try {
+      const user = await UserModel.findByIdAndDelete(id, { projection });
+      return user ? this.transformId(user) : null;
+    } catch (error) {
+      logger.error({ error }, 'Error in delete');
+      throw error;
+    }
+  }
+
+  async addRefreshToken(userId: string, refreshToken: string): Promise<void> {
+    try {
+      await UserModel.findByIdAndUpdate(userId, { $push: { refreshTokens: refreshToken } }, { new: true });
+      logger.info('Refresh token added successfully');
+    } catch (error) {
+      logger.error({ error }, 'Error in addRefreshToken');
+      throw error;
+    }
+  }
+
+  async updateRefreshToken(userId: string, refreshToken: string): Promise<void> {
+    try {
+      await UserModel.findByIdAndUpdate(
+        userId,
+        {
+          refreshToken,
+          isTokenValid: true,
+        },
+        { new: true },
+      );
+      logger.info('Refresh token updated successfully');
+    } catch (error) {
+      logger.error({ error }, 'Error in updateRefreshToken');
+      throw error;
+    }
+  }
+
+  async invalidateToken(userId: string): Promise<void> {
+    try {
+      await UserModel.findByIdAndUpdate(userId, { isTokenValid: false }, { new: true });
+      logger.info('Token invalidated successfully');
+    } catch (error) {
+      logger.error({ error }, 'Error in invalidateToken');
+      throw error;
+    }
+  }
+
+  async removeRefreshToken(userId: string): Promise<void> {
+    try {
+      await UserModel.findByIdAndUpdate(
+        userId,
+        {
+          refreshToken: null,
+          isTokenValid: false,
+        },
+        { new: true },
+      );
+      logger.info('Refresh token removed successfully');
+    } catch (error) {
+      logger.error({ error }, 'Error in removeRefreshToken');
+      throw error;
+    }
+  }
 }

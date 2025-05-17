@@ -15,10 +15,34 @@ const userSchema = new mongoose.Schema(
       required: true,
       unique: true,
     },
-    password: { type: String, required: true },
-    name: { type: String, required: true },
-    surname: { type: String, required: true },
-    address: { type: String, required: true },
+    password: {
+      type: String,
+      required: true,
+    },
+    name: {
+      type: String,
+      required: true,
+    },
+    surname: {
+      type: String,
+      required: true,
+    },
+    address: {
+      type: String,
+      required: true,
+    },
+    isBlocked: {
+      type: Boolean,
+      default: false,
+    },
+    refreshToken: {
+      type: String,
+      default: null,
+    },
+    isTokenValid: {
+      type: Boolean,
+      default: true,
+    },
   },
   {
     timestamps: true, // Add createdAt and updatedAt fields automatically
