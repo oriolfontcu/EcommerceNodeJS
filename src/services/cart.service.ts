@@ -85,4 +85,83 @@ export class CartService {
       throw error;
     }
   }
+
+  async updateItemQuantity(userId: string, productId: string, quantity: number): Promise<ICart> {
+    try {
+      logger.debug(`CartService: Updating quantity of product ${productId} to ${quantity} for user ${userId}`);
+
+      if (quantity < 0) {
+        throw new AppError('Quantity cannot be negative', httpStatus.BAD_REQUEST);
+      }
+
+      // Verify product exists
+      const product = await this.productRepository.getById(productId);
+      if (!product) {
+        throw new AppError('Product not found', httpStatus.NOT_FOUND);
+      }
+
+      // Get cart
+      const cart = await this.cartRepository.getByUserId(userId);
+      if (!cart) {
+        throw new AppError('Cart not found', httpStatus.NOT_FOUND);
+      }
+
+      // Update item quantity
+      const updatedCart = await this.cartRepository.updateItemQuantity(cart.id!, productId, quantity);
+      logger.info(`CartService: Product ${productId} quantity updated successfully`);
+
+      return updatedCart;
+    } catch (error) {
+      logger.error({ error }, 'CartService: Error updating product quantity');
+      throw error;
+    }
+  }
+
+  async toggleItemSelection(userId: string, productId: string): Promise<ICart> {
+    try {
+      logger.debug(`CartService: Toggling selection of product ${productId} for user ${userId}`);
+
+      // Verify product exists
+      const product = await this.productRepository.getById(productId);
+      if (!product) {
+        throw new AppError('Product not found', httpStatus.NOT_FOUND);
+      }
+
+      // Get cart
+      const cart = await this.cartRepository.getByUserId(userId);
+      if (!cart) {
+        throw new AppError('Cart not found', httpStatus.NOT_FOUND);
+      }
+
+      // Toggle item selection
+      const updatedCart = await this.cartRepository.toggleItemSelection(cart.id!, productId);
+      logger.info(`CartService: Product ${productId} selection toggled successfully`);
+
+      return updatedCart;
+    } catch (error) {
+      logger.error({ error }, 'CartService: Error toggling product selection');
+      throw error;
+    }
+  }
+
+  async processSelectedItems(userId: string): Promise<ICart> {
+    try {
+      logger.debug(`CartService: Processing selected items for user ${userId}`);
+
+      // Get cart
+      const cart = await this.cartRepository.getByUserId(userId);
+      if (!cart) {
+        throw new AppError('Cart not found', httpStatus.NOT_FOUND);
+      }
+
+      // Process selected items
+      const updatedCart = await this.cartRepository.processSelectedItems(cart.id!);
+      logger.info(`CartService: Selected items processed successfully`);
+
+      return updatedCart;
+    } catch (error) {
+      logger.error({ error }, 'CartService: Error processing selected items');
+      throw error;
+    }
+  }
 }

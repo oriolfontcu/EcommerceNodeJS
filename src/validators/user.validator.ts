@@ -34,4 +34,11 @@ export class UserValidator {
     email: UserValidator.email,
     password: UserValidator.password,
   });
+
+  static readonly userPaginationSchema = Joi.object({
+    page: Joi.number().integer().min(1).default(1),
+    limit: Joi.number().integer().min(1).max(100).default(10),
+    sortBy: Joi.string().valid('createdAt', 'email', 'name', 'surname').default('createdAt'),
+    sortOrder: Joi.string().valid('asc', 'desc').default('desc'),
+  });
 }

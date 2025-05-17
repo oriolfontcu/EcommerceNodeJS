@@ -1,7 +1,9 @@
 import mongoose from 'mongoose';
 import { IProduct } from '../interfaces/product.interface';
 
-export interface IProductModel extends IProduct, mongoose.Document {}
+export interface IProductModel extends Omit<IProduct, 'id'>, mongoose.Document {
+  _id: mongoose.Types.ObjectId;
+}
 
 const productSchema = new mongoose.Schema(
   {

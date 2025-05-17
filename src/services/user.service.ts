@@ -84,6 +84,9 @@ export class UserService {
       logger.warn(`User with email ${normalizedData.email} already exists`);
       throw new AppError('A user with this email already exists', httpStatus.CONFLICT);
     }
+    if (!normalizedData.password || !normalizedData.passwordConfirmation) {
+      throw new AppError('Password and password confirmation are required', httpStatus.BAD_REQUEST);
+    }
     this.validatePassword(normalizedData.password, normalizedData.passwordConfirmation);
     normalizedData.password = await PasswordHelper.hashPassword(normalizedData.password);
 
@@ -112,6 +115,9 @@ export class UserService {
         logger.warn(`Another user with email ${normalizedData.email} already exists`);
         throw new AppError('A user with this email already exists', httpStatus.CONFLICT);
       }
+    }
+    if (!normalizedData.password || !normalizedData.passwordConfirmation) {
+      throw new AppError('Password and password confirmation are required', httpStatus.BAD_REQUEST);
     }
     if (normalizedData.password) {
       this.validatePassword(normalizedData.password, normalizedData.passwordConfirmation);

@@ -53,7 +53,11 @@ export class CartRepository {
         existingItem.quantity += 1;
       } else {
         // Add new item if product doesn't exist
-        cart.items.push({ productId: new mongoose.Types.ObjectId(productId), quantity: 1 });
+        cart.items.push({
+          productId: new mongoose.Types.ObjectId(productId),
+          quantity: 1,
+          selected: false,
+        });
       }
 
       await cart.save();
@@ -76,6 +80,71 @@ export class CartRepository {
       return this.transformId(cart);
     } catch (error) {
       logger.error({ error }, 'Error in removeItem');
+      throw error;
+    }
+  }
+
+  async updateItemQuantity(cartId: string, productId: string, quantity: number): Promise<ICart> {
+    try {
+      const cart = await CartModel.findById(cartId);
+      if (!cart) {
+        throw new Error('Cart not found');
+      }
+
+      const item = cart.items.find((item) => item.productId.toString() === productId);
+      if (!item) {
+        throw new Error('Item not found in cart');
+      }
+
+      if (quantity <= 0) {
+        // If quantity is 0 or negative, remove the item
+        cart.items = cart.items.filter((item) => item.productId.toString() !== productId);
+      } else {
+        item.quantity = quantity;
+      }
+
+      await cart.save();
+      return this.transformId(cart);
+    } catch (error) {
+      logger.error({ error }, 'Error in updateItemQuantity');
+      throw error;
+    }
+  }
+
+  async toggleItemSelection(cartId: string, productId: string): Promise<ICart> {
+    try {
+      const cart = await CartModel.findById(cartId);
+      if (!cart) {
+        throw new Error('Cart not found');
+      }
+
+      const item = cart.items.find((item) => item.productId.toString() === productId);
+      if (!item) {
+        throw new Error('Item not found in cart');
+      }
+
+      item.selected = !item.selected;
+      await cart.save();
+      return this.transformId(cart);
+    } catch (error) {
+      logger.error({ error }, 'Error in toggleItemSelection');
+      throw error;
+    }
+  }
+
+  async processSelectedItems(cartId: string): Promise<ICart> {
+    try {
+      const cart = await CartModel.findById(cartId);
+      if (!cart) {
+        throw new Error('Cart not found');
+      }
+
+      // Remove selected items
+      cart.items = cart.items.filter((item) => !item.selected);
+      await cart.save();
+      return this.transformId(cart);
+    } catch (error) {
+      logger.error({ error }, 'Error in processSelectedItems');
       throw error;
     }
   }

@@ -1,4 +1,3 @@
-import axios from 'axios';
 import { httpStatus } from '../config/httpStatusCodes';
 import logger from '../config/logger';
 import { AppError } from '../utils/application.error';
@@ -19,8 +18,12 @@ export class ProductService {
 
   private async fetchProductsFromAPI(): Promise<IProduct[]> {
     try {
-      const response = await axios.get(this.FAKE_STORE_API_URL);
-      return response.data.map((product: IProduct) => ({
+      const response = await fetch(this.FAKE_STORE_API_URL);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+      return data.map((product: IProduct) => ({
         title: product.title,
         price: this.generateRandomPrice(),
         description: product.description,
